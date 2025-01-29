@@ -24,6 +24,8 @@ import torch.nn.init as init
 
 from peft import LoraConfig, PeftModel, get_peft_model, get_peft_model_state_dict
 
+from .testing_utils import require_torch_gpu
+
 
 def is_megatron_available() -> bool:
     return importlib.util.find_spec("megatron") is not None
@@ -93,6 +95,7 @@ if is_megatron_available():
             x = self.lm_head(x)[0]
             return x
 
+    @require_torch_gpu
     class TestMegatronLora(unittest.TestCase):
         def setUp(self):
             initialize_model_parallel(1, 1)
@@ -123,21 +126,21 @@ if is_megatron_available():
 
         def test_megatron_lora_module(self):
             megatron_module = self.megatron_module
-            self.assertTrue(isinstance(megatron_module, PeftModel))
+            assert isinstance(megatron_module, PeftModel)
 
             for name, module in megatron_module.named_modules():
                 if name.endswith("linear"):
-                    self.assertTrue(hasattr(module, "lora_A"))
-                    self.assertTrue(hasattr(module, "lora_B"))
+                    assert hasattr(module, "lora_A")
+                    assert hasattr(module, "lora_B")
                 if name.endswith("linear.lora_A.default"):
-                    self.assertTrue(isinstance(module, torch.nn.Linear))
+                    assert isinstance(module, torch.nn.Linear)
                 if name.endswith("linear.lora_B.default"):
-                    self.assertTrue(isinstance(module, tensor_parallel.ColumnParallelLinear))
+                    assert isinstance(module, tensor_parallel.ColumnParallelLinear)
 
                 if name.endswith("lm_head.lora_A.default"):
-                    self.assertTrue(isinstance(module, tensor_parallel.RowParallelLinear))
+                    assert isinstance(module, tensor_parallel.RowParallelLinear)
                 if name.endswith("lm_head.lora_B.default"):
-                    self.assertTrue(isinstance(module, torch.nn.Linear))
+                    assert isinstance(module, torch.nn.Linear)
 
         def test_forward(self):
             x = torch.ones((2, 4, 10)).cuda()
@@ -145,7 +148,7 @@ if is_megatron_available():
             dummt_module_result = self.dummy_module(x)
 
             # Because lora_B is initialized with 0, the forward results of two models should be equal before backward.
-            self.assertTrue(megatron_module_result.equal(dummt_module_result))
+            assert megatron_module_result.equal(dummt_module_result)
 
         def test_backward(self):
             optimizer = torch.optim.AdamW(self.megatron_module.parameters())
@@ -165,4 +168,4 @@ if is_megatron_available():
             peft_state_dict = get_peft_model_state_dict(self.megatron_module)
 
             for key in peft_state_dict.keys():
-                self.assertTrue("lora" in key)
+                assert "lora" in key
