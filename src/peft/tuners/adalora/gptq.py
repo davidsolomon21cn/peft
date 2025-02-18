@@ -1,4 +1,3 @@
-# coding=utf-8
 # Copyright 2023-present the HuggingFace Inc. team.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -56,8 +55,7 @@ class SVDQuantLinear(torch.nn.Module, AdaLoraLayer):
             requires_conversion = not torch.is_autocast_enabled()
             if requires_conversion:
                 expected_dtype = result.dtype
-                if x.dtype != torch.float32:
-                    x = x.float()
+                x = self._cast_input_dtype(x, torch.float32)
 
             output = (dropout(x) @ (lora_A * lora_E).T @ lora_B.T) * scaling / ranknum
             # TODO: here, the dtype conversion is applied on the *whole expression*,

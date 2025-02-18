@@ -1,4 +1,3 @@
-# coding=utf-8
 # Copyright 2023-present the HuggingFace Inc. team.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,8 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 from dataclasses import dataclass, field
-from typing import List, Optional, Union
+from typing import Optional, Union
 
 from peft.config import PeftConfig
 from peft.utils import PeftType
@@ -34,6 +35,10 @@ class IA3Config(PeftConfig):
             excluding the output layer. If this is not specified, modules will be chosen according to the model
             architecture. If the architecture is not known, an error will be raised -- in this case, you should specify
             the target modules manually.
+        exclude_modules (`Optional[Union[List[str], str]]`):
+            The names of the modules to not apply the adapter. When passing a string, a regex match will be performed.
+            When passing a list of strings, either an exact match will be performed or it is checked if the name of the
+            module ends with any of the passed strings.
         feedforward_modules (`Optional[Union[List[str], str]]`):
             The names of the modules to be treated as feedforward modules, as in the original paper. These modules will
             have (IA)³ vectors multiplied to the input, instead of the output. `feedforward_modules` must be a name or
@@ -48,7 +53,7 @@ class IA3Config(PeftConfig):
             discouraged.
     """
 
-    target_modules: Optional[Union[List[str], str]] = field(
+    target_modules: Optional[Union[list[str], str]] = field(
         default=None,
         metadata={
             "help": (
@@ -56,11 +61,15 @@ class IA3Config(PeftConfig):
                 "For example, ['q', 'v'] or '.*decoder.*(SelfAttention|EncDecAttention).*(q|v)$'."
                 "This can also be a wildcard 'all-linear' which matches all linear/Conv1D layers except the output layer."
                 "If not specified, modules will be chosen according to the model architecture, If the architecture is "
-                "not known, an error will be raised -- in this case, you shoud specify the target modules manually."
+                "not known, an error will be raised -- in this case, you should specify the target modules manually."
             ),
         },
     )
-    feedforward_modules: Optional[Union[List[str], str]] = field(
+    exclude_modules: Optional[Union[list[str], str]] = field(
+        default=None,
+        metadata={"help": "List of module names or regex expression of the module names to exclude from (IA)³."},
+    )
+    feedforward_modules: Optional[Union[list[str], str]] = field(
         default=None,
         metadata={
             "help": "List of module names or a regex expression of module names which are feedforward"
@@ -71,7 +80,7 @@ class IA3Config(PeftConfig):
         default=False,
         metadata={"help": "Set this to True if the layer to replace stores weight like (fan_in, fan_out)"},
     )
-    modules_to_save: Optional[List[str]] = field(
+    modules_to_save: Optional[list[str]] = field(
         default=None,
         metadata={
             "help": "List of modules apart from (IA)^3 layers to be set as trainable and saved in the final checkpoint. "
@@ -85,9 +94,13 @@ class IA3Config(PeftConfig):
     )
 
     def __post_init__(self):
+        super().__post_init__()
         self.peft_type = PeftType.IA3
         self.target_modules = (
             set(self.target_modules) if isinstance(self.target_modules, list) else self.target_modules
+        )
+        self.exclude_modules = (
+            set(self.exclude_modules) if isinstance(self.exclude_modules, list) else self.exclude_modules
         )
         self.feedforward_modules = (
             set(self.feedforward_modules) if isinstance(self.feedforward_modules, list) else self.feedforward_modules

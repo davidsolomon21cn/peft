@@ -27,6 +27,7 @@ class DummyModel(torch.nn.Module):
         super().__init__()
         self.embedding = torch.nn.Embedding(10, 10)
         self.linear = torch.nn.Linear(10, 10)
+        self.linear2 = torch.nn.Linear(10, 10, bias=True)
         self.lm_head = torch.nn.Linear(10, 10)
 
     def forward(self, input_ids):
@@ -56,14 +57,14 @@ class TestPeft(unittest.TestCase):
 
         for name, module in self.model.named_modules():
             if name == "linear":
-                self.assertTrue(hasattr(module, "lora_A"))
-                self.assertTrue(hasattr(module, "lora_B"))
+                assert hasattr(module, "lora_A")
+                assert hasattr(module, "lora_B")
 
     def test_get_peft_model_state_dict(self):
         peft_state_dict = get_peft_model_state_dict(self.model)
 
         for key in peft_state_dict.keys():
-            self.assertTrue("lora" in key)
+            assert "lora" in key
 
     def test_modules_to_save(self):
         self.model = DummyModel()
@@ -74,20 +75,23 @@ class TestPeft(unittest.TestCase):
             r=64,
             bias="none",
             target_modules=["linear"],
-            modules_to_save=["embedding"],
+            modules_to_save=["embedding", "linear2"],
         )
 
         self.model = inject_adapter_in_model(lora_config, self.model)
 
         for name, module in self.model.named_modules():
             if name == "linear":
-                self.assertTrue(hasattr(module, "lora_A"))
-                self.assertTrue(hasattr(module, "lora_B"))
-            elif name == "embedding":
-                self.assertTrue(isinstance(module, ModulesToSaveWrapper))
+                assert hasattr(module, "lora_A")
+                assert hasattr(module, "lora_B")
+            elif name in ["embedding", "linear2"]:
+                assert isinstance(module, ModulesToSaveWrapper)
 
         state_dict = get_peft_model_state_dict(self.model)
 
-        self.assertTrue("embedding.weight" in state_dict.keys())
+        assert "embedding.weight" in state_dict.keys()
 
-        self.assertTrue(hasattr(self.model.embedding, "weight"))
+        assert hasattr(self.model.embedding, "weight")
+
+        assert hasattr(self.model.linear2, "weight")
+        assert hasattr(self.model.linear2, "bias")

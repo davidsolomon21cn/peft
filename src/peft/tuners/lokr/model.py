@@ -1,4 +1,3 @@
-# coding=utf-8
 # Copyright 2023-present the HuggingFace Inc. team.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -36,6 +35,8 @@ class LoKrModel(LycorisTuner):
         model (`torch.nn.Module`): The model to which the adapter tuner layers will be attached.
         config ([`LoKrConfig`]): The configuration of the LoKr model.
         adapter_name (`str`): The name of the adapter, defaults to `"default"`.
+        low_cpu_mem_usage (`bool`, `optional`, defaults to `False`):
+            Create empty adapter weights on meta device. Useful to speed up the loading process.
 
     Returns:
         `torch.nn.Module`: The LoKr model.
@@ -103,11 +104,12 @@ class LoKrModel(LycorisTuner):
 
         # Regexp matching - Find key which matches current target_name in patterns provided
         pattern_keys = list(chain(config.rank_pattern.keys(), config.alpha_pattern.keys()))
-        target_name_key = next(filter(lambda key: re.match(f"(.*\.)?{key}$", current_key), pattern_keys), target_name)
+        target_name_key = next(filter(lambda key: re.match(rf"(.*\.)?{key}$", current_key), pattern_keys), target_name)
 
         kwargs = config.to_dict()
         kwargs["r"] = config.rank_pattern.get(target_name_key, config.r)
         kwargs["alpha"] = config.alpha_pattern.get(target_name_key, config.alpha)
+        kwargs["rank_dropout_scale"] = config.rank_dropout_scale
 
         if isinstance(target, LoKrLayer):
             target.update_layer(adapter_name, **kwargs)

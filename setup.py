@@ -15,14 +15,29 @@
 from setuptools import find_packages, setup
 
 
-VERSION = "0.7.2.dev0"
+VERSION = "0.14.1.dev0"
 
 extras = {}
-extras["quality"] = ["black ~= 22.0", "ruff>=0.0.241", "urllib3<=2.0.0"]
-extras["docs_specific"] = ["hf-doc-builder"]
+extras["quality"] = [
+    "black",  # doc-builder has an implicit dependency on Black, see huggingface/doc-builder#434
+    "hf-doc-builder",
+    "ruff~=0.9.2",
+]
+extras["docs_specific"] = [
+    "black",  # doc-builder has an implicit dependency on Black, see huggingface/doc-builder#434
+    "hf-doc-builder",
+]
 extras["dev"] = extras["quality"] + extras["docs_specific"]
 extras["test"] = extras["dev"] + [
-    "pytest", "pytest-cov", "pytest-xdist", "parameterized", "datasets", "diffusers<0.21.0", "scipy"
+    "pytest",
+    "pytest-cov",
+    "pytest-xdist",
+    "parameterized",
+    "datasets",
+    "diffusers",
+    "scipy",
+    "protobuf",
+    "sentencepiece",
 ]
 
 setup(
@@ -30,18 +45,18 @@ setup(
     version=VERSION,
     description="Parameter-Efficient Fine-Tuning (PEFT)",
     license_files=["LICENSE"],
-    long_description=open("README.md", "r", encoding="utf-8").read(),
+    long_description=open("README.md", encoding="utf-8").read(),
     long_description_content_type="text/markdown",
     keywords="deep learning",
     license="Apache",
     author="The HuggingFace team",
-    author_email="sourab@huggingface.co",
+    author_email="benjamin@huggingface.co",
     url="https://github.com/huggingface/peft",
     package_dir={"": "src"},
     packages=find_packages("src"),
-    package_data={"peft": ["py.typed"]},
+    package_data={"peft": ["py.typed", "tuners/boft/fbd/fbd_cuda.cpp", "tuners/boft/fbd/fbd_cuda_kernel.cu"]},
     entry_points={},
-    python_requires=">=3.8.0",
+    python_requires=">=3.9.0",
     install_requires=[
         "numpy>=1.17",
         "packaging>=20.0",
@@ -52,7 +67,7 @@ setup(
         "tqdm",
         "accelerate>=0.21.0",
         "safetensors",
-        "huggingface_hub>=0.17.0",
+        "huggingface_hub>=0.25.0",
     ],
     extras_require=extras,
     classifiers=[
@@ -63,14 +78,17 @@ setup(
         "License :: OSI Approved :: Apache Software License",
         "Operating System :: OS Independent",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.11",
+        "Programming Language :: Python :: 3.12",
         "Topic :: Scientific/Engineering :: Artificial Intelligence",
     ],
 )
 
 # Release checklist
 # 1. Change the version in __init__.py and setup.py to the release version, e.g. from "0.6.0.dev0" to "0.6.0"
-# 2. Check if there are any deprecations that need to be addressed for this release by seaching for "# TODO" in the code
+# 2. Check if there are any deprecations that need to be addressed for this release by searching for "# TODO" in the code
 # 3. Commit these changes with the message: "Release: VERSION", create a PR and merge it.
 # 4. Add a tag in git to mark the release: "git tag -a VERSION -m 'Adds tag VERSION for pypi' "
 #    Push the tag to git:
